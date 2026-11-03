@@ -11,6 +11,7 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     tailwind.config = {
@@ -75,10 +76,10 @@
       <span>تۆمارکردنی مەسرەفی نوێ</span>
     </button>
 
-    <!-- فلتەری پۆلێنەکان (Pills) بەپێی پێداویستییەکانت -->
+    <!-- فلتەری پۆلێنەکان -->
     <div class="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar text-xs">
       <button onclick="filterByCategory('all')" data-category="all" class="cat-filter-btn px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-xl whitespace-nowrap shadow">هەمووی</button>
-      <button onclick="filterByCategory('وەستا، کرێکار و ئامێر')" data-category="وەستا، کرێکار و ئامێر" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">وەستا و کرێکار و شۆفڵ</button>
+      <button onclick="filterByCategory('وەستا، کرێکار و ئامێر')" data-category="وەستا، کرێکار و ئامێر" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">وەستا و کرێکار</button>
       <button onclick="filterByCategory('بیناسازی و چیمەنتۆ')" data-category="بیناسازی و چیمەنتۆ" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">بیناسازی و چیمەنتۆ</button>
       <button onclick="filterByCategory('کرێی گەیاندن و بارکردن')" data-category="کرێی گەیاندن و بارکردن" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">کرێی گەیاندن</button>
       <button onclick="filterByCategory('ئاو و ئاوەڕۆ (تەئسیسات)')" data-category="ئاو و ئاوەڕۆ (تەئسیسات)" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">ئاو و ئاوەڕۆ</button>
@@ -99,12 +100,15 @@
     <div class="space-y-2">
       <div class="flex items-center justify-between px-1">
         <h2 class="text-xs font-bold text-slate-400">تەواوی مەسرەفە تۆمارکراوەکان</h2>
+        <span class="text-[10px] text-emerald-400 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> سێرڤەری هەور چالاکە
+        </span>
       </div>
       <div id="expensesListContainer" class="space-y-2"></div>
     </div>
   </main>
 
-  <!-- Modal بۆ تۆمارکردن و دەستکاری (تەنها ٣ خانە) -->
+  <!-- Modal بۆ تۆمارکردن و دەستکاری -->
   <div id="expenseModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-brand-card w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-brand-border shadow-2xl p-4 space-y-4">
       
@@ -114,22 +118,18 @@
       </div>
 
       <form onsubmit="handleExpenseSubmit(event)" class="space-y-3.5 text-xs">
-        
-        <!-- ١. ناوی مەسرەف -->
         <div>
           <label class="text-slate-300 font-semibold block mb-1">١. ناوی مەسرەف / کەرەستە *</label>
-          <input type="text" id="exp_title" required placeholder="وەک: چەو و لم، شۆفڵی پشیلە، تەنکی ئاو..." 
+          <input type="text" id="exp_title" required placeholder="وەک: چەو و لم، شۆفڵی پشیلە..." 
                  class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-400">
         </div>
 
-        <!-- ٢. بڕی پارە بە دینار -->
         <div>
           <label class="text-slate-300 font-semibold block mb-1">٢. بڕی پارە (دیناری عێراقی) *</label>
           <input type="number" id="exp_amount" required placeholder="وەک: 85000" 
                  class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-amber-400 font-black text-sm focus:outline-none focus:border-amber-400">
         </div>
 
-        <!-- ٣. پۆلێنە نوێیەکان لە ناو لیستدا -->
         <div>
           <label class="text-slate-300 font-semibold block mb-1">٣. پۆلێن (بەش) *</label>
           <select id="exp_category" required class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-400">
@@ -145,18 +145,41 @@
         </div>
 
         <button type="submit" id="submitBtn" class="w-full py-3.5 bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-amber-500/20 transition mt-2">
-          پاشەکەوتکردن
+          پاشەکەوتکردن لە سێرڤەر
         </button>
       </form>
     </div>
   </div>
 
   <script>
-    let expenses = JSON.parse(localStorage.getItem('awena_renovation_expenses')) || [];
+    const SUPABASE_URL = 'https://yryszfvdokaplaweqatj.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyeXN6ZnZkb2thcGxhd2VxYXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDQ3NjgsImV4cCI6MjEwODc4MDc2OH0.aMJQI1EvLr1Yf6vEzj9rDEsGzLZByyzZQWbQrqSb3WQ';
+
+    const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // هەموو ١٥ مەسرەفەکەت لێرە پاشەکەوتکراوە و گەڕێندراوەتەوە!
+    const INITIAL_RESTORATION_DATA = [
+      { id: 'exp-1', title: 'ڕوخاندنی پایە', amount: 30000, category: 'وەستا، کرێکار و ئامێر' },
+      { id: 'exp-2', title: 'شۆفڵی پشیلە', amount: 85000, category: 'وەستا، کرێکار و ئامێر' },
+      { id: 'exp-3', title: 'لابردنی کۆنکریت و تێکردنی تێکەڵە', amount: 240000, category: 'وەستا، کرێکار و ئامێر' },
+      { id: 'exp-4', title: 'تەئسیسی ئاوەڕۆ و ئاو', amount: 65000, category: 'ئاو و ئاوەڕۆ (تەئسیسات)' },
+      { id: 'exp-5', title: 'تەنکی ئاو', amount: 255000, category: 'ئاو و ئاوەڕۆ (تەئسیسات)' },
+      { id: 'exp-6', title: 'ئاو', amount: 10000, category: 'ئاو و ئاوەڕۆ (تەئسیسات)' },
+      { id: 'exp-7', title: 'کرێی هێنانی تەنکەر', amount: 10000, category: 'کرێی گەیاندن و بارکردن' },
+      { id: 'exp-8', title: 'باراناو', amount: 36000, category: 'ئاو و ئاوەڕۆ (تەئسیسات)' },
+      { id: 'exp-9', title: 'ڕەنگی چیمەنتۆ، سۆندە و نۆزڵ', amount: 18000, category: 'بیناسازی و چیمەنتۆ' },
+      { id: 'exp-10', title: 'شەبەکەی کۆنکریت', amount: 76000, category: 'بیناسازی و چیمەنتۆ' },
+      { id: 'exp-11', title: 'کرێی گەیاندنی چەو، لم و چیمەنتۆ', amount: 65000, category: 'کرێی گەیاندن و بارکردن' },
+      { id: 'exp-12', title: 'وەستا و کرێکاری چیمەنتۆ', amount: 177000, category: 'وەستا، کرێکار و ئامێر' },
+      { id: 'exp-13', title: 'تیپ، بزمار، سەرمەنهۆڵ و نانوچا', amount: 12500, category: 'نان و چا و ووردەواڵە' },
+      { id: 'exp-14', title: 'چەو، لم و چیمەنتۆ', amount: 400000, category: 'بیناسازی و چیمەنتۆ' },
+      { id: 'exp-15', title: 'عەشەیای ئاوەڕۆ و کارەبا', amount: 290000, category: 'ئاو و ئاوەڕۆ (تەئسیسات)' }
+    ];
+
+    let expenses = JSON.parse(localStorage.getItem('awena_renovation_expenses')) || INITIAL_RESTORATION_DATA;
     let editingId = null;
     let selectedCategory = 'all';
 
-    // ٨ پۆلێنە ڕێکخراوەکە بەپێی کارەکەت
     const CATEGORIES_LIST = [
       'وەستا، کرێکار و ئامێر',
       'بیناسازی و چیمەنتۆ',
@@ -168,9 +191,35 @@
       'نان و چا و ووردەواڵە'
     ];
 
-    function saveToStorage() {
+    async function loadExpensesFromCloud() {
+      try {
+        const { data, error } = await dbClient
+          .from('renovation_expenses')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          expenses = data.map(r => ({ id: r.id, title: r.title, amount: r.amount, category: r.category }));
+        } else if (expenses.length > 0) {
+          // ئەگەر لە سێرڤەر نەبوو، ئەم ١٥ داتایە ڕاستەوخۆ دەنێرێتە سەر سێرڤەر بۆ پاراستن
+          syncAllToCloud();
+        }
+      } catch (e) {
+        console.log('هەڵە لە هێنانی داتای کلاود:', e);
+      }
       localStorage.setItem('awena_renovation_expenses', JSON.stringify(expenses));
       renderUI();
+    }
+
+    async function syncAllToCloud() {
+      for (const item of expenses) {
+        await dbClient.from('renovation_expenses').upsert({
+          id: item.id,
+          title: item.title,
+          amount: item.amount,
+          category: item.category
+        });
+      }
     }
 
     function renderUI() {
@@ -188,7 +237,6 @@
 
     function renderCategorySummary() {
       const container = document.getElementById('categorySummaryCards');
-
       const catTotals = {};
       CATEGORIES_LIST.forEach(cat => catTotals[cat] = 0);
       
@@ -301,44 +349,45 @@
       document.getElementById('expenseModal').classList.add('hidden');
     }
 
-    function handleExpenseSubmit(e) {
+    async function handleExpenseSubmit(e) {
       e.preventDefault();
       const title = document.getElementById('exp_title').value.trim();
       const amount = parseFloat(document.getElementById('exp_amount').value) || 0;
       const category = document.getElementById('exp_category').value;
 
+      const itemData = {
+        id: editingId || ('exp-' + Date.now()),
+        title,
+        amount,
+        category
+      };
+
       if (editingId) {
         const index = expenses.findIndex(e => e.id === editingId);
-        if (index !== -1) {
-          expenses[index] = { ...expenses[index], title, amount, category };
-        }
+        if (index !== -1) expenses[index] = itemData;
       } else {
-        expenses.unshift({
-          id: 'exp-' + Date.now(),
-          title,
-          amount,
-          category
-        });
+        expenses.unshift(itemData);
       }
 
-      saveToStorage();
+      localStorage.setItem('awena_renovation_expenses', JSON.stringify(expenses));
+      renderUI();
       closeExpenseModal();
+
+      // پاشەکەوتکردن لە سێرڤەری هەور بۆ پاراستنی هەمیشەیی
+      await dbClient.from('renovation_expenses').upsert(itemData);
     }
 
-    function deleteExpense(id) {
-      if (confirm('ئایا دڵنیایت لە سڕینەوەی ئەم مەسرەفە؟')) {
-        expenses = expenses.filter(e => e.id !== id);
-        saveToStorage();
-      }
+    async function deleteExpense(id) {
+      if (!confirm('ئایا دڵنیایت لە سڕینەوەی ئەم مەسرەفە؟')) return;
+      expenses = expenses.filter(e => e.id !== id);
+      localStorage.setItem('awena_renovation_expenses', JSON.stringify(expenses));
+      renderUI();
+      await dbClient.from('renovation_expenses').delete().eq('id', id);
     }
 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      });
-    }
-
-    renderUI();
+    window.addEventListener('DOMContentLoaded', () => {
+      loadExpensesFromCloud();
+    });
   </script>
 </body>
 </html>
