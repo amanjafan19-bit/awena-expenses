@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>حیساباتی نۆژەنکردنەوە — AWENA</title>
   
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0d1117">
   <meta name="mobile-web-app-capable" content="yes">
   
@@ -62,12 +63,10 @@
       <span class="text-[11px] text-slate-500 block pt-1" id="totalItemsCount">0 مەسرەف تۆمارکراوە</span>
     </div>
 
-    <!-- پوختەی خەرجی بەپێی بەشەکان (Categories Summary) -->
+    <!-- پوختەی خەرجی بەپێی بەشەکان -->
     <div class="space-y-1.5">
       <span class="text-xs font-bold text-slate-400 px-1">خەرجی بەپێی پۆلێنەکان</span>
-      <div id="categorySummaryCards" class="grid grid-cols-2 gap-2 text-xs">
-        <!-- بە شێوەی خۆکار دروست دەبێت -->
-      </div>
+      <div id="categorySummaryCards" class="grid grid-cols-2 gap-2 text-xs"></div>
     </div>
 
     <!-- دوگمەی تۆمارکردنی مەسرەفی نوێ -->
@@ -76,7 +75,7 @@
       <span>تۆمارکردنی مەسرەفی نوێ</span>
     </button>
 
-    <!-- فلتەری پۆلێنەکان (Pills) -->
+    <!-- فلتەری پۆلێنەکان -->
     <div class="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar text-xs">
       <button onclick="filterByCategory('all')" id="filter-all" class="cat-filter-btn px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-xl whitespace-nowrap shadow">هەمووی</button>
       <button onclick="filterByCategory('وەستا و کرێکار')" id="filter-وەستا و کرێکار" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">وەستا و کرێکار</button>
@@ -105,7 +104,7 @@
     </div>
   </main>
 
-  <!-- Modal بۆ تۆمارکردن و دەستکاری (تەنها ٣ خانە) -->
+  <!-- Modal -->
   <div id="expenseModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-brand-card w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-brand-border shadow-2xl p-4 space-y-4">
       
@@ -115,22 +114,18 @@
       </div>
 
       <form onsubmit="handleExpenseSubmit(event)" class="space-y-3.5 text-xs">
-        
-        <!-- ١. ناوی مەسرەف -->
         <div>
           <label class="text-slate-300 font-semibold block mb-1">١. ناوی مەسرەف / کەرەستە *</label>
-          <input type="text" id="exp_title" required placeholder="وەک: بلۆک و چیمەنتۆ، سویچی کارەبا، بۆیاخ..." 
+          <input type="text" id="exp_title" required placeholder="وەک: چیمەنتۆ، سویچی کارەبا، بۆیاخ..." 
                  class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-400">
         </div>
 
-        <!-- ٢. بڕی پارە بە دینار -->
         <div>
           <label class="text-slate-300 font-semibold block mb-1">٢. بڕی پارە (دیناری عێراقی) *</label>
           <input type="number" id="exp_amount" required placeholder="وەک: 75000" 
                  class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-amber-400 font-black text-sm focus:outline-none focus:border-amber-400">
         </div>
 
-        <!-- ٣. پۆلێن (Category) -->
         <div>
           <label class="text-slate-300 font-semibold block mb-1">٣. پۆلێن (بەش) *</label>
           <select id="exp_category" required class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-400">
@@ -153,7 +148,6 @@
   </div>
 
   <script>
-    // کۆگای پاشەکەوتکردنی مەسرەفەکان
     let expenses = JSON.parse(localStorage.getItem('awena_renovation_expenses')) || [];
     let editingId = null;
     let selectedCategory = 'all';
@@ -170,14 +164,12 @@
       lucide.createIcons();
     }
 
-    // ژماردنی کۆی گشتی
     function updateTotals() {
       const total = expenses.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
       document.getElementById('totalExpensesAmount').innerHTML = `${total.toLocaleString()} <span class="text-sm font-bold text-slate-400">د.ع</span>`;
       document.getElementById('totalItemsCount').innerText = `${expenses.length} مەسرەف تۆمارکراوە`;
     }
 
-    // پوختەی پۆلێنەکان
     function renderCategorySummary() {
       const container = document.getElementById('categorySummaryCards');
       const categories = [
@@ -195,7 +187,6 @@
         }
       });
 
-      // تەنها ئەو بەشانە پیشان دەدات کە مەسرەفیان تێدا کراوە
       const activeCategories = categories.filter(c => catTotals[c] > 0);
 
       if (activeCategories.length === 0) {
@@ -211,7 +202,6 @@
       `).join('');
     }
 
-    // پیشاندانی لیستی مەسرەفەکان
     function renderExpensesList(searchQuery = '') {
       const container = document.getElementById('expensesListContainer');
       let filtered = expenses;
@@ -329,7 +319,13 @@
       }
     }
 
-    // دەستپێکردن
+    // تۆمارکردنی Service Worker بۆ ئەوەی ڕێگەی دابەزاندن بدات
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
     renderUI();
   </script>
 </body>
