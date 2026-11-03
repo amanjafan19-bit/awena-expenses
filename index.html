@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>حیساباتی نۆژەنکردنەوە — AWENA</title>
+  
+  <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              dark: '#0d1117',
+              card: '#161b22',
+              border: '#30363d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;900&display=swap');
+    body { font-family: 'Vazirmatn', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-brand-dark text-slate-100 min-h-screen pb-12 select-none">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-brand-card/95 backdrop-blur border-b border-brand-border px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-lg shadow-amber-500/20 font-black text-lg text-slate-950">
+        <i data-lucide="hammer" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="font-extrabold text-sm tracking-wide text-white">نۆژەنکردنەوەی دوکان</h1>
+        <p class="text-[10px] text-slate-400">حیساباتی خەرجی و مەسرەفەکان</p>
+      </div>
+    </div>
+    <span class="text-[10px] bg-slate-800 border border-brand-border text-amber-400 font-bold px-2 py-1 rounded-lg">AWENA</span>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- کۆی گشتی خەرجی نۆژەنکردنەوە -->
+    <div class="bg-gradient-to-b from-brand-card to-slate-900 p-4 rounded-2xl border border-brand-border shadow-xl space-y-1 text-center">
+      <span class="text-xs text-slate-400 font-semibold block">کۆی گشتی پارەی خەرجکراو</span>
+      <div class="text-3xl font-black text-amber-400 tracking-tight" id="totalExpensesAmount">0 <span class="text-sm font-bold text-slate-400">د.ع</span></div>
+      <span class="text-[11px] text-slate-500 block pt-1" id="totalItemsCount">0 مەسرەف تۆمارکراوە</span>
+    </div>
+
+    <!-- پوختەی خەرجی بەپێی بەشەکان (Categories Summary) -->
+    <div class="space-y-1.5">
+      <span class="text-xs font-bold text-slate-400 px-1">خەرجی بەپێی پۆلێنەکان</span>
+      <div id="categorySummaryCards" class="grid grid-cols-2 gap-2 text-xs">
+        <!-- بە شێوەی خۆکار دروست دەبێت -->
+      </div>
+    </div>
+
+    <!-- دوگمەی تۆمارکردنی مەسرەفی نوێ -->
+    <button onclick="openNewExpenseModal()" class="w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm rounded-2xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition">
+      <i data-lucide="plus-circle" class="w-5 h-5"></i>
+      <span>تۆمارکردنی مەسرەفی نوێ</span>
+    </button>
+
+    <!-- فلتەری پۆلێنەکان (Pills) -->
+    <div class="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar text-xs">
+      <button onclick="filterByCategory('all')" id="filter-all" class="cat-filter-btn px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-xl whitespace-nowrap shadow">هەمووی</button>
+      <button onclick="filterByCategory('وەستا و کرێکار')" id="filter-وەستا و کرێکار" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">وەستا و کرێکار</button>
+      <button onclick="filterByCategory('بیناسازی و کەرەستە')" id="filter-بیناسازی و کەرەستە" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">بیناسازی</button>
+      <button onclick="filterByCategory('کارەبا و ڕووناکی')" id="filter-کارەبا و ڕووناکی" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">کارەبا</button>
+      <button onclick="filterByCategory('بۆیاخ و ڕازاندنەوە')" id="filter-بۆیاخ و ڕازاندنەوە" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">بۆیاخ</button>
+      <button onclick="filterByCategory('دیکۆر و تەختە')" id="filter-دیکۆر و تەختە" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">دیکۆر</button>
+      <button onclick="filterByCategory('جام و ئاسنگەری')" id="filter-جام و ئاسنگەری" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">جام و ئاسنگەری</button>
+      <button onclick="filterByCategory('کەلوپەلی ئاو')" id="filter-کەلوپەلی ئاو" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">ئاو و ئاوەڕۆ</button>
+      <button onclick="filterByCategory('هەمەجۆر')" id="filter-هەمەجۆر" class="cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap">هەمەجۆر</button>
+    </div>
+
+    <!-- گەڕانی خێرا -->
+    <div class="relative">
+      <i data-lucide="search" class="w-4 h-4 absolute top-3.5 start-3 text-slate-400"></i>
+      <input type="text" oninput="handleSearch(this.value)" placeholder="گەڕان بەپێی ناوی مەسرەفەکە..." 
+             class="w-full bg-brand-card border border-brand-border rounded-xl py-2.5 ps-9 pe-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400">
+    </div>
+
+    <!-- لیستی مەسرەفەکان -->
+    <div class="space-y-2">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-xs font-bold text-slate-400">تەواوی مەسرەفە تۆمارکراوەکان</h2>
+      </div>
+      <div id="expensesListContainer" class="space-y-2"></div>
+    </div>
+  </main>
+
+  <!-- Modal بۆ تۆمارکردن و دەستکاری (تەنها ٣ خانە) -->
+  <div id="expenseModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-brand-card w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-brand-border shadow-2xl p-4 space-y-4">
+      
+      <div class="flex items-center justify-between border-b border-brand-border pb-3">
+        <h3 class="font-bold text-base text-white" id="modalTitle">تۆمارکردنی مەسرەفی نوێ</h3>
+        <button onclick="closeExpenseModal()" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form onsubmit="handleExpenseSubmit(event)" class="space-y-3.5 text-xs">
+        
+        <!-- ١. ناوی مەسرەف -->
+        <div>
+          <label class="text-slate-300 font-semibold block mb-1">١. ناوی مەسرەف / کەرەستە *</label>
+          <input type="text" id="exp_title" required placeholder="وەک: بلۆک و چیمەنتۆ، سویچی کارەبا، بۆیاخ..." 
+                 class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-400">
+        </div>
+
+        <!-- ٢. بڕی پارە بە دینار -->
+        <div>
+          <label class="text-slate-300 font-semibold block mb-1">٢. بڕی پارە (دیناری عێراقی) *</label>
+          <input type="number" id="exp_amount" required placeholder="وەک: 75000" 
+                 class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-amber-400 font-black text-sm focus:outline-none focus:border-amber-400">
+        </div>
+
+        <!-- ٣. پۆلێن (Category) -->
+        <div>
+          <label class="text-slate-300 font-semibold block mb-1">٣. پۆلێن (بەش) *</label>
+          <select id="exp_category" required class="w-full bg-slate-800 border border-brand-border rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-400">
+            <option value="وەستا و کرێکار">وەستا و کرێکار</option>
+            <option value="بیناسازی و کەرەستە">بیناسازی و کەرەستە</option>
+            <option value="کارەبا و ڕووناکی">کارەبا و ڕووناکی</option>
+            <option value="بۆیاخ و ڕازاندنەوە">بۆیاخ و ڕازاندنەوە</option>
+            <option value="دیکۆر و تەختە">دیکۆر و تەختە</option>
+            <option value="جام و ئاسنگەری">جام و ئاسنگەری</option>
+            <option value="کەلوپەلی ئاو">کەلوپەلی ئاو و ئاوەڕۆ</option>
+            <option value="هەمەجۆر">هەمەجۆر (شتومەکی تر)</option>
+          </select>
+        </div>
+
+        <button type="submit" id="submitBtn" class="w-full py-3.5 bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-amber-500/20 transition mt-2">
+          پاشەکەوتکردن
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // کۆگای پاشەکەوتکردنی مەسرەفەکان
+    let expenses = JSON.parse(localStorage.getItem('awena_renovation_expenses')) || [];
+    let editingId = null;
+    let selectedCategory = 'all';
+
+    function saveToStorage() {
+      localStorage.setItem('awena_renovation_expenses', JSON.stringify(expenses));
+      renderUI();
+    }
+
+    function renderUI() {
+      updateTotals();
+      renderCategorySummary();
+      renderExpensesList();
+      lucide.createIcons();
+    }
+
+    // ژماردنی کۆی گشتی
+    function updateTotals() {
+      const total = expenses.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+      document.getElementById('totalExpensesAmount').innerHTML = `${total.toLocaleString()} <span class="text-sm font-bold text-slate-400">د.ع</span>`;
+      document.getElementById('totalItemsCount').innerText = `${expenses.length} مەسرەف تۆمارکراوە`;
+    }
+
+    // پوختەی پۆلێنەکان
+    function renderCategorySummary() {
+      const container = document.getElementById('categorySummaryCards');
+      const categories = [
+        'وەستا و کرێکار', 'بیناسازی و کەرەستە', 'کارەبا و ڕووناکی', 
+        'بۆیاخ و ڕازاندنەوە', 'دیکۆر و تەختە', 'جام و ئاسنگەری', 'کەلوپەلی ئاو', 'هەمەجۆر'
+      ];
+
+      const catTotals = {};
+      categories.forEach(cat => catTotals[cat] = 0);
+      expenses.forEach(item => {
+        if (catTotals[item.category] !== undefined) {
+          catTotals[item.category] += (parseFloat(item.amount) || 0);
+        } else {
+          catTotals['هەمەجۆر'] = (catTotals['هەمەجۆر'] || 0) + (parseFloat(item.amount) || 0);
+        }
+      });
+
+      // تەنها ئەو بەشانە پیشان دەدات کە مەسرەفیان تێدا کراوە
+      const activeCategories = categories.filter(c => catTotals[c] > 0);
+
+      if (activeCategories.length === 0) {
+        container.innerHTML = `<p class="col-span-2 text-center text-[11px] text-slate-500 py-2">هیچ مەسرەفێک تۆمار نەکراوە</p>`;
+        return;
+      }
+
+      container.innerHTML = activeCategories.map(cat => `
+        <div onclick="filterByCategory('${cat}')" class="bg-brand-card p-2.5 rounded-xl border border-brand-border hover:border-amber-500/40 cursor-pointer transition">
+          <span class="text-[10px] text-slate-400 block">${cat}</span>
+          <span class="font-extrabold text-sm text-slate-200">${catTotals[cat].toLocaleString()} <span class="text-[9px] text-slate-500">د.ع</span></span>
+        </div>
+      `).join('');
+    }
+
+    // پیشاندانی لیستی مەسرەفەکان
+    function renderExpensesList(searchQuery = '') {
+      const container = document.getElementById('expensesListContainer');
+      let filtered = expenses;
+
+      if (selectedCategory !== 'all') {
+        filtered = filtered.filter(item => item.category === selectedCategory);
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(item => item.title.toLowerCase().includes(q));
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">هیچ مەسرەفێک نەدۆزرایەوە</p>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <div class="bg-brand-card p-3 rounded-xl border border-brand-border flex items-center justify-between gap-3">
+          <div class="space-y-0.5">
+            <h3 class="font-bold text-xs text-white">${item.title}</h3>
+            <span class="text-[10px] bg-slate-800 text-amber-400 border border-brand-border px-1.5 py-0.5 rounded font-medium">${item.category}</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="font-black text-sm text-emerald-400">${parseFloat(item.amount).toLocaleString()} <span class="text-[9px] text-slate-500">د.ع</span></span>
+            
+            <div class="flex items-center gap-1">
+              <button onclick="openEditModal('${item.id}')" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-brand-border">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteExpense('${item.id}')" class="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg border border-rose-500/20">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterByCategory(cat) {
+      selectedCategory = cat;
+      document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+        btn.className = 'cat-filter-btn px-3 py-1.5 bg-brand-card border border-brand-border text-slate-300 font-medium rounded-xl whitespace-nowrap';
+      });
+      const activeBtn = document.getElementById(`filter-${cat}`);
+      if (activeBtn) {
+        activeBtn.className = 'cat-filter-btn px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-xl whitespace-nowrap shadow';
+      }
+      renderExpensesList();
+      lucide.createIcons();
+    }
+
+    function handleSearch(q) {
+      renderExpensesList(q);
+      lucide.createIcons();
+    }
+
+    function openNewExpenseModal() {
+      editingId = null;
+      document.getElementById('modalTitle').innerText = 'تۆمارکردنی مەسرەفی نوێ';
+      document.getElementById('exp_title').value = '';
+      document.getElementById('exp_amount').value = '';
+      document.getElementById('exp_category').value = 'وەستا و کرێکار';
+      document.getElementById('expenseModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function openEditModal(id) {
+      const item = expenses.find(e => e.id === id);
+      if (!item) return;
+
+      editingId = id;
+      document.getElementById('modalTitle').innerText = 'دەستکاریکردنی مەسرەف';
+      document.getElementById('exp_title').value = item.title;
+      document.getElementById('exp_amount').value = item.amount;
+      document.getElementById('exp_category').value = item.category;
+      document.getElementById('expenseModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeExpenseModal() {
+      document.getElementById('expenseModal').classList.add('hidden');
+    }
+
+    function handleExpenseSubmit(e) {
+      e.preventDefault();
+      const title = document.getElementById('exp_title').value.trim();
+      const amount = parseFloat(document.getElementById('exp_amount').value) || 0;
+      const category = document.getElementById('exp_category').value;
+
+      if (editingId) {
+        const index = expenses.findIndex(e => e.id === editingId);
+        if (index !== -1) {
+          expenses[index] = { ...expenses[index], title, amount, category };
+        }
+      } else {
+        expenses.unshift({
+          id: 'exp-' + Date.now(),
+          title,
+          amount,
+          category
+        });
+      }
+
+      saveToStorage();
+      closeExpenseModal();
+    }
+
+    function deleteExpense(id) {
+      if (confirm('ئایا دڵنیایت لە سڕینەوەی ئەم مەسرەفە؟')) {
+        expenses = expenses.filter(e => e.id !== id);
+        saveToStorage();
+      }
+    }
+
+    // دەستپێکردن
+    renderUI();
+  </script>
+</body>
+</html>
