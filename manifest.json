@@ -1,0 +1,10 @@
+{
+  "name": "حیساباتی نۆژەنکردنەوە",
+  "short_name": "نۆژەنکردنەوە",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "dir": "rtl",
+  "lang": "ckb"
+}
