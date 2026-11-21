@@ -39,7 +39,7 @@
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-brand-dark text-slate-100 min-h-screen pb-12 select-none">
+<body class="bg-brand-dark text-slate-100 min-h-screen pb-16 select-none">
 
   <!-- Header -->
   <header class="sticky top-0 z-40 bg-brand-card/95 backdrop-blur border-b border-brand-border px-4 py-3 flex items-center justify-between">
@@ -96,15 +96,23 @@
              class="w-full bg-brand-card border border-brand-border rounded-xl py-2.5 ps-9 pe-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400">
     </div>
 
-    <!-- لیستی مەسرەفەکان -->
+    <!-- لیستی مەسرەفەکان لەگەڵ نیشاندەری ڕاستەقینەی سێرڤەر -->
     <div class="space-y-2">
       <div class="flex items-center justify-between px-1">
         <h2 class="text-xs font-bold text-slate-400">تەواوی مەسرەفە تۆمارکراوەکان</h2>
-        <span class="text-[10px] text-emerald-400 flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> سێرڤەری هەور چالاکە
+        <span id="realCloudStatus" class="text-[10px] text-amber-400 flex items-center gap-1 font-semibold">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> پشکنینی سێرڤەر...
         </span>
       </div>
       <div id="expensesListContainer" class="space-y-2"></div>
+    </div>
+
+    <!-- دوگمەی کۆپیکردنی هەموو لیستەکە وەک یەدەگی تێبینی -->
+    <div class="pt-3">
+      <button onclick="copyAllExpensesBackup()" class="w-full py-2.5 px-3 bg-slate-800/80 hover:bg-slate-800 border border-brand-border text-slate-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition">
+        <i data-lucide="copy" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span>کۆپیکردنی هەموو مەسرەفەکان بۆ تێبینی / واتسئەپ</span>
+      </button>
     </div>
   </main>
 
@@ -157,7 +165,6 @@
 
     const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // هەموو ١٥ مەسرەفەکەت لێرە پاشەکەوتکراوە و گەڕێندراوەتەوە!
     const INITIAL_RESTORATION_DATA = [
       { id: 'exp-1', title: 'ڕوخاندنی پایە', amount: 30000, category: 'وەستا، کرێکار و ئامێر' },
       { id: 'exp-2', title: 'شۆفڵی پشیلە', amount: 85000, category: 'وەستا، کرێکار و ئامێر' },
@@ -177,6 +184,7 @@
     ];
 
     let expenses = JSON.parse(localStorage.getItem('awena_renovation_expenses')) || INITIAL_RESTORATION_DATA;
+    let pendingSyncIds = JSON.parse(localStorage.getItem('awena_expenses_pending')) || [];
     let editingId = null;
     let selectedCategory = 'all';
 
@@ -191,35 +199,76 @@
       'نان و چا و ووردەواڵە'
     ];
 
+    function setCloudStatus(isOk, msg = '') {
+      const badge = document.getElementById('realCloudStatus');
+      if (!badge) return;
+      if (isOk) {
+        badge.className = 'text-[10px] text-emerald-400 flex items-center gap-1 font-bold';
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ${msg || 'پارێزراوە لە سێرڤەری هەور'}`;
+      } else {
+        badge.className = 'text-[10px] text-rose-400 flex items-center gap-1 font-bold';
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> ${msg || 'کێشە لە سێرڤەر! تەنها لۆکاڵە'}`;
+      }
+    }
+
     async function loadExpensesFromCloud() {
       try {
+        // سەرەتا ئەگەر داتای ئۆفلاینی نەنێردراو هەبێت، دەیاننێرێتە سێرڤەر تا نەفەوتێن
+        if (pendingSyncIds.length > 0) {
+          for (const pid of [...pendingSyncIds]) {
+            const localItem = expenses.find(e => e.id === pid);
+            if (localItem) {
+              const { error } = await dbClient.from('renovation_expenses').upsert({
+                id: localItem.id,
+                title: localItem.title,
+                amount: localItem.amount,
+                category: localItem.category
+              });
+              if (!error) {
+                pendingSyncIds = pendingSyncIds.filter(id => id !== pid);
+                localStorage.setItem('awena_expenses_pending', JSON.stringify(pendingSyncIds));
+              }
+            }
+          }
+        }
+
         const { data, error } = await dbClient
           .from('renovation_expenses')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          console.error('هەڵەی Supabase:', error);
+          setCloudStatus(false, 'کێشەی سێرڤەر: ' + error.message);
+        } else if (data && data.length > 0) {
           expenses = data.map(r => ({ id: r.id, title: r.title, amount: r.amount, category: r.category }));
+          setCloudStatus(true);
         } else if (expenses.length > 0) {
-          // ئەگەر لە سێرڤەر نەبوو، ئەم ١٥ داتایە ڕاستەوخۆ دەنێرێتە سەر سێرڤەر بۆ پاراستن
-          syncAllToCloud();
+          const ok = await syncAllToCloud();
+          setCloudStatus(ok);
+        } else {
+          setCloudStatus(true);
         }
       } catch (e) {
-        console.log('هەڵە لە هێنانی داتای کلاود:', e);
+        console.log('ئۆفلاین:', e);
+        setCloudStatus(false, 'ئۆفلاینە (بێ ئینتەرنێت)');
       }
       localStorage.setItem('awena_renovation_expenses', JSON.stringify(expenses));
       renderUI();
     }
 
     async function syncAllToCloud() {
+      let allOk = true;
       for (const item of expenses) {
-        await dbClient.from('renovation_expenses').upsert({
+        const { error } = await dbClient.from('renovation_expenses').upsert({
           id: item.id,
           title: item.title,
           amount: item.amount,
           category: item.category
         });
+        if (error) allOk = false;
       }
+      return allOk;
     }
 
     function renderUI() {
@@ -351,6 +400,10 @@
 
     async function handleExpenseSubmit(e) {
       e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerText = 'خەریکی ناردنە بۆ سێرڤەر...';
+
       const title = document.getElementById('exp_title').value.trim();
       const amount = parseFloat(document.getElementById('exp_amount').value) || 0;
       const category = document.getElementById('exp_category').value;
@@ -373,8 +426,25 @@
       renderUI();
       closeExpenseModal();
 
-      // پاشەکەوتکردن لە سێرڤەری هەور بۆ پاراستنی هەمیشەیی
-      await dbClient.from('renovation_expenses').upsert(itemData);
+      btn.disabled = false;
+      btn.innerText = 'پاشەکەوتکردن لە سێرڤەر';
+
+      // پشکنینی ڕاستەوخۆی پاشەکەوتکردن لە Supabase
+      try {
+        const { error } = await dbClient.from('renovation_expenses').upsert(itemData);
+        if (error) {
+          if (!pendingSyncIds.includes(itemData.id)) pendingSyncIds.push(itemData.id);
+          localStorage.setItem('awena_expenses_pending', JSON.stringify(pendingSyncIds));
+          setCloudStatus(false, 'کێشە لە پاشەکەوتی هەور!');
+          alert('ئاگاداربە! داتاکە تەنها لە مۆبایل پاشەکەوت بوو، نەچووە سەر سێرڤەر:\n' + error.message);
+        } else {
+          setCloudStatus(true, 'پاشەکەوتکرا لە سێرڤەری هەور ✓');
+        }
+      } catch (err) {
+        if (!pendingSyncIds.includes(itemData.id)) pendingSyncIds.push(itemData.id);
+        localStorage.setItem('awena_expenses_pending', JSON.stringify(pendingSyncIds));
+        setCloudStatus(false, 'ئۆفلاینە (چاوەڕێی ئینتەرنێتە)');
+      }
     }
 
     async function deleteExpense(id) {
@@ -382,11 +452,40 @@
       expenses = expenses.filter(e => e.id !== id);
       localStorage.setItem('awena_renovation_expenses', JSON.stringify(expenses));
       renderUI();
-      await dbClient.from('renovation_expenses').delete().eq('id', id);
+
+      try {
+        const { error } = await dbClient.from('renovation_expenses').delete().eq('id', id);
+        if (error) {
+          alert('هەڵە لە سڕینەوە لە سێرڤەر: ' + error.message);
+        } else {
+          setCloudStatus(true);
+        }
+      } catch (err) {
+        setCloudStatus(false);
+      }
+    }
+
+    /* کۆپیکردنی هەموو لیستەکە وەک یەدەگ */
+    function copyAllExpensesBackup() {
+      const total = expenses.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+      let text = `*حیساباتی نۆژەنکردنەوەی دوکانی AWENA*\n`;
+      text += `کۆی گشتی: ${total.toLocaleString()} دینار (${expenses.length} مەسرەف)\n`;
+      text += `----------------------------------\n`;
+      expenses.forEach((e, idx) => {
+        text += `${idx + 1}. ${e.title} — ${Number(e.amount).toLocaleString()} د.ع (${e.category})\n`;
+      });
+      navigator.clipboard.writeText(text).then(() => {
+        alert('هەموو مەسرەفەکانت کۆپی کران!\nدەتوانیت لە تێبینی مۆبایل یان واتسئەپ پەیستی بکەیت بۆ دڵنیایی.');
+      }).catch(() => {
+        prompt('ئەم دەقە کۆپی بکە:', text);
+      });
     }
 
     window.addEventListener('DOMContentLoaded', () => {
       loadExpensesFromCloud();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
     });
   </script>
 </body>
